@@ -37,14 +37,16 @@ runs:
   steps: 
     
     - name: Set Android Version
+      shell: bash
       uses: damienaicheh/update-android-version-manifest-action@v1.0.0
       with:
         android-manifest-path: ${{ inputs.android-project-path }}/Properties/AndroidManifest.xml
         version-name: ${{ inputs.version-number }}.${{ inputs.build-number }}
-        version-code: ${{ inputs.build-numbe r}}
+        version-code: ${{ inputs.build-number}}
         print-file: true
       
     - name: Initialize Variables
+      shell: bash
       run: |
           PACKAGE=`xmllint --xpath 'string(/manifest/@*[local-name()="package"])' ${{ inputs.android-project-path }}/Properties/AndroidManifest.xml`
           VERSION=`xmllint --xpath 'string(/manifest/@*[local-name()="versionName"])' ${{ inputs.android-project-path }}/Properties/AndroidManifest.xml`
@@ -57,10 +59,12 @@ runs:
           echo "Branch: $BRANCH"
     
     - name: Restore NuGet Packages
+      shell: bash
       run: |
         nuget restore ${{ inputs.project-path }}
         
     - name: Build Solution
+      shell: bash
       run: |
         msbuild ${{ inputs.project-path }} /p:Configuration=${{ inputs.build_type }} /p:AndroidBuildApplicationPackage=true
       
