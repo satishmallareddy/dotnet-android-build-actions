@@ -1,0 +1,73 @@
+name: "Build .NET Android Solution"
+description: "Build .NET Solution..."
+inputs:
+  build_type:
+    description: 'Build type (Release or Debug)'
+    required: true
+    default: 'Release'
+  deploy-level:
+    description: 'Deployment level (L3 or L4 or L6)'
+    default: 'L3'
+    required: true
+  version-number:
+    description: 'The version number to use'
+    default: '1.0.0'
+    required: true
+  build-number:
+    description: 'The build number to use'
+    default: '1'
+    required: true
+  solution-path:
+    description: 'The path to the solution (.sln) file'
+    required: true
+  run-unittests:
+    description: 'Run unit tests?'
+    type: boolean
+    required: true
+    default: true
+  unittests-project-path:
+    description: 'The path to the unit test project'
+    required: true
+  android-project-path:
+    description: 'The path to the android project'
+    required: true
+
+runs:
+  using: "composite"
+  steps: 
+    
+    - name: Set Android Version
+      uses: damienaicheh/update-android-version-manifest-action@v1.0.0
+      with:
+        android-manifest-path: ${{ inputs.android-project-path }}/Properties/AndroidManifest.xml
+        version-name: ${{ inputs.version-number }}.${{ inputs.build-number }}
+        version-code: ${{ inputs.build-numbe r}}
+        print-file: true
+      
+    - name: Initialize Variables
+      run: |
+          PACKAGE=`xmllint --xpath 'string(/manifest/@*[local-name()="package"])' ${{ inputs.android-project-path }}/Properties/AndroidManifest.xml`
+          VERSION=`xmllint --xpath 'string(/manifest/@*[local-name()="versionName"])' ${{ inputs.android-project-path }}/Properties/AndroidManifest.xml`
+          BRANCH=`echo $GITHUB_REF | cut -d'/' -f3`
+          echo "BRANCH=${BRANCH}" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "PACKAGE=$PACKAGE" >> $GITHUB_ENV
+          echo "Package: $PACKAGE"
+          echo "Version Code: $VERSION"
+          echo "Branch: $BRANCH"
+    
+    - name: Restore NuGet Packages
+      run: |
+        nuget restore ${{ inputs.project-path }}
+        
+    - name: Build Solution
+      run: |
+        msbuild ${{ inputs.project-path }} /p:Configuration=${{ inputs.build_type }} /p:AndroidBuildApplicationPackage=true
+      
+    - name: Copy Unsigned APK Files
+      uses: actions/upload-artifact@v3
+      with:
+       name: BaseAPK
+       retention-days: 1
+       path: |
+         ${{ inputs.android-project-path }}/bin/${{ inputs.build_type }}/${{ env.PACKAGE }}.apk
